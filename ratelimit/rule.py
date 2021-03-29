@@ -1,6 +1,6 @@
+from collections import OrderedDict
 from dataclasses import dataclass
 from typing import Optional, Tuple
-
 
 WINDOW_SIZE = {
     "second": 1,
@@ -34,7 +34,7 @@ class Rule:
             if limit is not None:
                 key = f"{path}:{user}:{name}"
                 d[key] = (limit, WINDOW_SIZE[name])
-        return sorted(d)
+        return OrderedDict(sorted(d.items()))
 
 
 RULENAMES: Tuple[str] = ("second", "minute", "hour", "day", "month")
