@@ -34,7 +34,7 @@ class Rule:
             if limit is not None:
                 key = f"{path}:{user}:{name}"
                 d[key] = (limit, WINDOW_SIZE[name])
-        return d
+        return sorted(d)
 
 
 RULENAMES: Tuple[str] = ("second", "minute", "hour", "day", "month")
