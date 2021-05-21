@@ -1,4 +1,4 @@
 from .core import RateLimitMiddleware
-from .rule import Rule
+from .rule import FixedRule
 
-__all__ = ("RateLimitMiddleware", "Rule")
+__all__ = ("RateLimitMiddleware", "FixedRule")

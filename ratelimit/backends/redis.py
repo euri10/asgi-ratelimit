@@ -3,7 +3,7 @@ import time
 from aredis import StrictRedis
 from aredis.pipeline import StrictPipeline, WatchError
 
-from ..rule import RULENAMES, Rule
+from ..rule import RULENAMES, FixedRule
 from . import BaseBackend
 
 DECREASE_SCRIPT = """
@@ -34,7 +34,7 @@ class RedisBackend(BaseBackend):
         )
         self.decrease_function = self._redis.register_script(DECREASE_SCRIPT)
 
-    async def increase_limit(self, path: str, user: str, rule: Rule) -> bool:
+    async def increase_limit(self, path: str, user: str, rule: FixedRule) -> bool:
         """
         Return True means successful increase.
         """
@@ -68,7 +68,7 @@ class RedisBackend(BaseBackend):
             except WatchError:  # pragma: no cover
                 return False
 
-    async def decrease_limit(self, path: str, user: str, rule: Rule) -> bool:
+    async def decrease_limit(self, path: str, user: str, rule: FixedRule) -> bool:
         """
         Return True means successful decrease.
         """

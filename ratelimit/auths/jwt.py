@@ -1,15 +1,7 @@
-from typing import Awaitable, Callable, List, Tuple, TypeVar, Union
+from typing import Awaitable, Callable, List, Optional, Tuple, Union
 
 import jwt
-
-try:
-    from cryptography.hazmat.primitives.asymmetric.rsa import (
-        RSAPrivateKey,
-        RSAPublicKey,
-    )
-except ImportError:  # pragma: no cover
-    RSAPublicKey = TypeVar("RSAPublicKey")
-    RSAPrivateKey = TypeVar("RSAPrivateKey")
+from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey, RSAPublicKey
 
 from ..types import Scope
 from . import EmptyInformation
@@ -33,7 +25,7 @@ def create_jwt_auth(
         """
         for name, value in scope["headers"]:  # type: bytes, bytes
             if name == b"authorization":
-                authorization = value.decode("utf8")
+                authorization: Optional[str] = value.decode("utf8")
                 break
         else:
             authorization = None

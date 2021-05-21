@@ -1,9 +1,21 @@
+import sys
 import time
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
-from typing import Dict, Sequence
+from typing import Dict, List, Optional, Tuple
 
-from ..rule import Rule
+from ..rule import FixedRule
+
+if sys.version_info >= (3, 8):  # pragma: no cover
+    from typing import TypedDict
+else:
+    from typing_extensions import TypedDict  # pragma: no cover
+
+
+class RedisResult(TypedDict):
+    scores: List[int]
+    expire_in: List[int]
+    epoch: float
 
 
 class BaseBackend(ABC):
@@ -13,7 +25,7 @@ class BaseBackend(ABC):
 
     @staticmethod
     def calc_incr_value(
-        last_timestamps: Sequence[float], rule: Rule
+        last_timestamps: List[Optional[float]], rule: FixedRule
     ) -> Dict[str, Dict[str, int]]:
 
         now_timestamp = time.time()
@@ -70,11 +82,11 @@ class BaseBackend(ABC):
         return incr_dict
 
     @abstractmethod
-    async def decrease_limit(self, path: str, user: str, rule: Rule) -> bool:
+    async def decrease_limit(self, path: str, user: str, rule: FixedRule) -> bool:
         raise NotImplementedError()
 
     @abstractmethod
-    async def increase_limit(self, path: str, user: str, rule: Rule) -> bool:
+    async def increase_limit(self, path: str, user: str, rule: FixedRule) -> bool:
         raise NotImplementedError()
 
     @abstractmethod
@@ -85,9 +97,11 @@ class BaseBackend(ABC):
     async def is_blocking(self, user: str) -> bool:
         raise NotImplementedError()
 
-    async def allow_request(self, path: str, user: str, rule: Rule) -> bool:
+    async def allow_request(
+        self, path: str, user: str, rule: FixedRule
+    ) -> Tuple[bool, Optional[RedisResult]]:
         if await self.is_blocking(user):
-            return False
+            return False, None
 
         updated = await self.increase_limit(path, user, rule)
         allow = updated or await self.decrease_limit(path, user, rule)
@@ -95,4 +109,4 @@ class BaseBackend(ABC):
         if not allow and rule.block_time:
             await self.set_block_time(user, rule.block_time)
 
-        return allow
+        return allow, None

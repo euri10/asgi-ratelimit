@@ -1,9 +1,12 @@
+from contextlib import suppress as do_not_raise
+
 import httpx
 import pytest
 
-from ratelimit import RateLimitMiddleware, Rule
+from ratelimit import FixedRule, RateLimitMiddleware
 from ratelimit.auths import EmptyInformation
 from ratelimit.backends.redis import RedisBackend
+from ratelimit.backends.slidingredis import SlidingRedisBackend
 
 
 async def hello_world(scope, receive, send):
@@ -48,7 +51,7 @@ async def test_on_auth_error_default():
         auth_func,
         RedisBackend(),
         {
-            r"/": [Rule(group="admin")],
+            r"/": [FixedRule(group="admin")],
         },
     )
     async with httpx.AsyncClient(
@@ -75,7 +78,7 @@ async def test_on_auth_error_with_handler():
         auth_func,
         RedisBackend(),
         {
-            r"/": [Rule(group="admin")],
+            r"/": [FixedRule(group="admin")],
         },
         on_auth_error=handle_auth_error,
     )
@@ -90,3 +93,32 @@ async def test_on_auth_error_with_handler():
         response = await client.get("/", headers=None)
         assert response.status_code == 401
         assert response.text == ""
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "backend, retry_after_enabled, retry_after_type, expectation",
+    [
+        (RedisBackend, True, None, pytest.raises(ValueError)),
+        (RedisBackend, True, "delay-seconds", pytest.raises(ValueError)),
+        (RedisBackend, True, "http-date", pytest.raises(ValueError)),
+        (RedisBackend, False, None, do_not_raise()),
+        (SlidingRedisBackend, False, None, do_not_raise()),
+        (SlidingRedisBackend, True, None, pytest.raises(ValueError)),
+        (SlidingRedisBackend, True, "delay-seconds", do_not_raise()),
+        (SlidingRedisBackend, True, "http-date", do_not_raise()),
+        (SlidingRedisBackend, True, "no", pytest.raises(ValueError)),
+    ],
+)
+async def test_error_if_retry_after_set_incorrectly(
+    backend, retry_after_enabled, retry_after_type, expectation
+):
+    with expectation:
+        RateLimitMiddleware(
+            hello_world,
+            auth_func,
+            backend(),
+            {},
+            retry_after_enabled=retry_after_enabled,
+            retry_after_type=retry_after_type,
+        )
